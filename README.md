@@ -17,8 +17,8 @@ coppy .env.example .env
 docker compose up --build
 ```
 
-- The UI will be available at `http://localhost`
-- The backend API will be running at `http://localhost/api` (proxied by Nginx)
+- The UI will be available at `http://localhost:80`
+- The backend API will be running at `http://localhost:9090` (proxied by Nginx)
 
 ## Contribution Guide
 
