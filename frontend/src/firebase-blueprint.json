@@ -1,0 +1,59 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user in the system",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "developer", "viewer"] },
+        "status": { "type": "string", "enum": ["online", "offline"] },
+        "lastActive": { "type": "timestamp" }
+      },
+      "required": ["uid", "email"]
+    },
+    "File": {
+      "title": "File",
+      "description": "A file in the workspace",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "type": { "type": "string" },
+        "content": { "type": "string" },
+        "size": { "type": "number" },
+        "updatedAt": { "type": "timestamp" },
+        "lockedBy": { "type": "string", "description": "UID of the user currently editing the file" }
+      },
+      "required": ["name", "type", "content"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "A chat message in the team workspace",
+      "type": "object",
+      "properties": {
+        "text": { "type": "string" },
+        "authorUid": { "type": "string" },
+        "authorName": { "type": "string" },
+        "createdAt": { "type": "timestamp" }
+      },
+      "required": ["text", "authorUid", "authorName", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles"
+    },
+    "/files/{fileId}": {
+      "schema": { "$ref": "#/entities/File" },
+      "description": "Shared files in the workspace"
+    },
+    "/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/Message" },
+      "description": "Team chat messages"
+    }
+  }
+}
