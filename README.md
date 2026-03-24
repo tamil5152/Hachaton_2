@@ -12,8 +12,8 @@ Follow these steps to run the application locally:
 
 ```bash
 git clone <repository-url>
-cd Hackaton_2
-coppy .env.example .env
+cd Hachaton_2
+copy .env.example .env
 docker compose up --build
 ```
 
