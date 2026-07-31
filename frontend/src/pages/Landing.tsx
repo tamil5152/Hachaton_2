@@ -7,14 +7,14 @@ const AnimatedCursor = ({ x, y, color, name, delay }: { x: number[], y: number[]
   <motion.div
     className="absolute z-0 pointer-events-none flex items-center gap-2"
     initial={{ x: x[0], y: y[0], opacity: 0 }}
-    animate={{ 
-      x: x, 
+    animate={{
+      x: x,
       y: y,
       opacity: [0, 1, 1, 0]
     }}
-    transition={{ 
-      duration: 8, 
-      repeat: Infinity, 
+    transition={{
+      duration: 8,
+      repeat: Infinity,
       delay: delay,
       ease: "easeInOut",
       times: [0, 0.1, 0.9, 1]
@@ -28,7 +28,7 @@ const AnimatedCursor = ({ x, y, color, name, delay }: { x: number[], y: number[]
 );
 
 const TimelineNode = ({ title, desc, delay, active }: { title: string, desc: string, delay: number, active: boolean }) => (
-  <motion.div 
+  <motion.div
     initial={{ opacity: 0, x: -20 }}
     whileInView={{ opacity: 1, x: 0 }}
     viewport={{ once: true, margin: "-100px" }}
@@ -71,7 +71,7 @@ export default function Landing() {
 
   return (
     <div ref={containerRef} className="min-h-screen bg-[#050505] text-zinc-200 font-sans selection:bg-blue-500/30 overflow-hidden relative">
-      
+
       {/* Abstract Background Grid & Glow */}
       <div className="fixed inset-0 z-0 pointer-events-none">
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:64px_64px]" />
@@ -115,8 +115,8 @@ export default function Landing() {
               <span className="flex h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
               <span className="text-xs font-medium text-zinc-300 tracking-wide uppercase">Hackathon Ready Platform</span>
             </motion.div>
-            
-            <motion.h1 
+
+            <motion.h1
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.1, ease: "easeOut" }}
@@ -127,8 +127,8 @@ export default function Landing() {
                 thought.
               </span>
             </motion.h1>
-            
-            <motion.p 
+
+            <motion.p
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
@@ -136,8 +136,8 @@ export default function Landing() {
             >
               The ultimate real-time collaboration environment with built-in vulnerability scanning and anomaly detection. Engineered for high-performance teams.
             </motion.p>
-            
-            <motion.div 
+
+            <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.3, ease: "easeOut" }}
@@ -147,7 +147,7 @@ export default function Landing() {
                 Start Coding Now
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Link>
-              <a 
+              <a
                 href="#demo"
                 className="w-full sm:w-auto px-8 py-4 text-base font-semibold text-white bg-white/5 border border-white/10 rounded-full hover:bg-white/10 transition-all active:scale-95 flex items-center justify-center gap-2 backdrop-blur-sm"
               >
@@ -158,69 +158,46 @@ export default function Landing() {
           </motion.div>
         </section>
 
-        {/* Video Section */}
-        <section id="demo" className="py-20 px-6 md:px-12 max-w-6xl mx-auto relative z-20">
-          <motion.div 
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.8 }}
-            className="relative rounded-3xl overflow-hidden border border-white/10 shadow-[0_0_50px_rgba(59,130,246,0.15)] bg-black/50 backdrop-blur-xl"
-          >
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent z-10 pointer-events-none" />
-            <div className="aspect-video w-full relative">
-              <iframe 
-                width="100%" 
-                height="100%" 
-                src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=0&mute=0&controls=1" 
-                title="HackCollab Demo" 
-                frameBorder="0" 
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                allowFullScreen
-                className="w-full h-full relative z-0"
-              ></iframe>
-            </div>
-          </motion.div>
-        </section>
+
 
         {/* Visionary Timeline & Features Split */}
         <section className="py-24 px-6 md:px-12 max-w-7xl mx-auto border-t border-white/5 bg-black/20 backdrop-blur-3xl">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-            
+
             {/* Left: Timeline */}
             <div>
               <h2 className="text-3xl md:text-4xl font-bold text-white mb-12 tracking-tight">The HackCollab Workflow</h2>
               <div className="relative">
-                <TimelineNode 
+                <TimelineNode
                   active={activeTimelineNode === 0}
                   delay={0.1}
-                  title="1. Instant Provisioning" 
-                  desc="Spin up a secure, isolated containerized environment in milliseconds. No local setup required." 
+                  title="1. Instant Provisioning"
+                  desc="Spin up a secure, isolated containerized environment in milliseconds. No local setup required."
                 />
-                <TimelineNode 
+                <TimelineNode
                   active={activeTimelineNode === 1}
                   delay={0.2}
-                  title="2. Real-time Sync" 
-                  desc="Collaborate with your team using sub-millisecond latency CRDT-based operational transforms." 
+                  title="2. Real-time Sync"
+                  desc="Collaborate with your team using sub-millisecond latency CRDT-based operational transforms."
                 />
-                <TimelineNode 
+                <TimelineNode
                   active={activeTimelineNode === 2}
                   delay={0.3}
-                  title="3. Continuous Security" 
-                  desc="Background AI agents scan your AST for vulnerabilities and hardcoded secrets as you type." 
+                  title="3. Continuous Security"
+                  desc="Background AI agents scan your AST for vulnerabilities and hardcoded secrets as you type."
                 />
-                <TimelineNode 
+                <TimelineNode
                   active={activeTimelineNode === 3}
                   delay={0.4}
-                  title="4. One-Click Deploy" 
-                  desc="Push your hackathon project to production instantly with zero-downtime deployments." 
+                  title="4. One-Click Deploy"
+                  desc="Push your hackathon project to production instantly with zero-downtime deployments."
                 />
               </div>
             </div>
 
             {/* Right: Feature Bento Box */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <motion.div 
+              <motion.div
                 whileHover={{ y: -5 }}
                 className="p-8 rounded-3xl bg-gradient-to-br from-zinc-900 to-black border border-white/5 shadow-2xl relative overflow-hidden group"
               >
@@ -229,8 +206,8 @@ export default function Landing() {
                 <h3 className="text-xl font-bold text-white mb-2">Cloud IDE</h3>
                 <p className="text-sm text-zinc-400 leading-relaxed">Full-featured VS Code compatible environment in your browser.</p>
               </motion.div>
-              
-              <motion.div 
+
+              <motion.div
                 whileHover={{ y: -5 }}
                 className="p-8 rounded-3xl bg-gradient-to-br from-zinc-900 to-black border border-white/5 shadow-2xl relative overflow-hidden group"
               >
@@ -240,7 +217,7 @@ export default function Landing() {
                 <p className="text-sm text-zinc-400 leading-relaxed">Enterprise-grade security with granular RBAC and audit logs.</p>
               </motion.div>
 
-              <motion.div 
+              <motion.div
                 whileHover={{ y: -5 }}
                 className="p-8 rounded-3xl bg-gradient-to-br from-zinc-900 to-black border border-white/5 shadow-2xl relative overflow-hidden group sm:col-span-2"
               >
