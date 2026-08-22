@@ -1,4 +1,6 @@
+import { useEffect, useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { onAuthStateChanged, User } from "firebase/auth";
 import Layout from "./components/Layout";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
@@ -9,15 +11,36 @@ import SecurityScanner from "./pages/SecurityScanner";
 import AnomalyDashboard from "./pages/AnomalyDashboard";
 import Alerts from "./pages/Alerts";
 import Profile from "./pages/Profile";
+import { auth } from "./firebase";
+
+function ProtectedRoute({ user, children }: { user: User | null; children: React.ReactNode }) {
+  if (!user) return <Navigate to="/auth" replace />;
+  return <>{children}</>;
+}
 
 export default function App() {
+  const [user, setUser] = useState<User | null>(null);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setCheckingAuth(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  if (checkingAuth) {
+    return <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-zinc-400">Loading...</div>;
+  }
+
   return (
     <Router>
       <Routes>
         <Route path="/" element={<Landing />} />
-        <Route path="/auth" element={<Auth />} />
-        
-        <Route element={<Layout />}>
+        <Route path="/auth" element={user ? <Navigate to="/dashboard" replace /> : <Auth />} />
+
+        <Route element={<ProtectedRoute user={user}><Layout /></ProtectedRoute>}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/workspace" element={<TeamWorkspace />} />
           <Route path="/editor" element={<CodeEditor />} />
@@ -26,8 +49,8 @@ export default function App() {
           <Route path="/alerts" element={<Alerts />} />
           <Route path="/profile" element={<Profile />} />
         </Route>
-        
-        <Route path="*" element={<Navigate to="/" replace />} />
+
+        <Route path="*" element={<Navigate to={user ? "/dashboard" : "/"} replace />} />
       </Routes>
     </Router>
   );
