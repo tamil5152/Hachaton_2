@@ -1,6 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { signInWithPopup } from 'firebase/auth';
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  updateProfile,
+} from 'firebase/auth';
 import { Code2, Mail, Lock } from 'lucide-react';
 import { auth, githubProvider, googleProvider } from '../firebase';
 
@@ -12,97 +17,20 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleEmailAuth = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (loading) return;
-    setError('');
-    setLoading(true);
-
-    try {
-      if (!email || !password) {
-        setError('Email and password are required');
-        setLoading(false);
-        return;
-      }
-
-      // Validate email format
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        setError('Please enter a valid email address');
-        setLoading(false);
-        return;
-      }
-
-      // Validate password length
-      if (password.length < 6) {
-        setError('Password must be at least 6 characters long');
-        setLoading(false);
-        return;
-      }
-
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 800));
-
-      if (isLogin) {
-        // Login: Check if user exists
-        const users = JSON.parse(localStorage.getItem('users') || '{}');
-        const userKey = btoa(email); // Simple encoding
-        
-        if (!users[userKey]) {
-          setError('Email not found. Please sign up first.');
-          setLoading(false);
-          return;
-        }
-
-        if (users[userKey].password !== btoa(password)) {
-          setError('Invalid password');
-          setLoading(false);
-          return;
-        }
-
-        // Successful login
-        const user = users[userKey];
-        localStorage.setItem('currentUser', JSON.stringify({
-          email: user.email,
-          name: user.name,
-          id: userKey,
-          loginTime: new Date().toISOString()
-        }));
-        navigate('/dashboard');
-      } else {
-        // Sign up: Create new user
-        const users = JSON.parse(localStorage.getItem('users') || '{}');
-        const userKey = btoa(email);
-
-        if (users[userKey]) {
-          setError('Email already registered. Please sign in instead.');
-          setLoading(false);
-          return;
-        }
-
-        // Extract name from email
-        const name = email.split('@')[0];
-        users[userKey] = {
-          email,
-          name: name.charAt(0).toUpperCase() + name.slice(1),
-          password: btoa(password),
-          createdAt: new Date().toISOString()
-        };
-
-        localStorage.setItem('users', JSON.stringify(users));
-        localStorage.setItem('currentUser', JSON.stringify({
-          email,
-          name: users[userKey].name,
-          id: userKey,
-          loginTime: new Date().toISOString()
-        }));
-
-        navigate('/dashboard');
-      }
-    } catch (err: any) {
-      setError(err.message || 'Authentication failed');
-    } finally {
-      setLoading(false);
+  const getAuthError = (err: any) => {
+    switch (err?.code) {
+      case 'auth/invalid-email': return 'Please enter a valid email address.';
+      case 'auth/user-not-found':
+      case 'auth/invalid-credential': return 'Invalid email or password.';
+      case 'auth/wrong-password': return 'Invalid email or password.';
+      case 'auth/email-already-in-use': return 'This email is already registered. Please sign in instead.';
+      case 'auth/weak-password': return 'Password must be at least 6 characters long.';
+      case 'auth/popup-closed-by-user': return 'Sign-in was cancelled.';
+      case 'auth/popup-blocked': return 'Popup blocked by your browser. Please allow popups and try again.';
+      case 'auth/unauthorized-domain': return 'This domain is not authorized in Firebase Authentication.';
+      case 'auth/operation-not-allowed': return 'This sign-in method is not enabled in Firebase Authentication.';
+      case 'auth/account-exists-with-different-credential': return 'An account already exists with the same email using a different sign-in method.';
+      default: return err?.message || 'Authentication failed. Please try again.';
     }
   };
 
@@ -113,44 +41,53 @@ export default function Auth() {
       id: user.uid,
       provider,
       photoURL: user.photoURL || null,
-      loginTime: new Date().toISOString()
+      loginTime: new Date().toISOString(),
     }));
   };
 
-  const getProviderError = (providerName: string, err: any) => {
-    const code = err?.code || '';
-    if (code === 'auth/popup-closed-by-user') return `${providerName} sign-in was cancelled.`;
-    if (code === 'auth/popup-blocked') return `Popup blocked by browser. Please allow popups for ${providerName} sign-in.`;
-    if (code === 'auth/unauthorized-domain') return `This domain is not authorized for ${providerName} sign-in.`;
-    if (code === 'auth/operation-not-allowed') return `${providerName} sign-in is not enabled in authentication settings.`;
-    return err?.message || `${providerName} sign-in failed.`;
-  };
-
-  const handleGoogleSignIn = async () => {
+  const handleEmailAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (loading) return;
+
     setError('');
     setLoading(true);
+
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      persistAuthenticatedUser(result.user, 'google');
+      const normalizedEmail = email.trim();
+      let userCredential;
+
+      if (isLogin) {
+        userCredential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
+      } else {
+        userCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
+        const displayName = normalizedEmail.split('@')[0];
+        await updateProfile(userCredential.user, {
+          displayName: displayName.charAt(0).toUpperCase() + displayName.slice(1),
+        });
+      }
+
+      persistAuthenticatedUser(userCredential.user, 'password');
       navigate('/dashboard');
     } catch (err: any) {
-      setError(getProviderError('Google', err));
+      setError(getAuthError(err));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGithubSignIn = async () => {
+  const handleProviderSignIn = async (provider: 'google' | 'github') => {
     if (loading) return;
+
     setError('');
     setLoading(true);
+
     try {
-      const result = await signInWithPopup(auth, githubProvider);
-      persistAuthenticatedUser(result.user, 'github');
+      const selectedProvider = provider === 'google' ? googleProvider : githubProvider;
+      const result = await signInWithPopup(auth, selectedProvider);
+      persistAuthenticatedUser(result.user, provider);
       navigate('/dashboard');
     } catch (err: any) {
-      setError(getProviderError('GitHub', err));
+      setError(getAuthError(err));
     } finally {
       setLoading(false);
     }
@@ -178,7 +115,7 @@ export default function Auth() {
             }}
             className="font-medium text-zinc-300 hover:text-white transition-colors"
           >
-            {isLogin ? 'start your 14-day free trial' : 'sign in to your existing account'}
+            {isLogin ? 'create a new account' : 'sign in to your existing account'}
           </button>
         </p>
       </div>
@@ -193,9 +130,7 @@ export default function Auth() {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-zinc-300">
-                Email address
-              </label>
+              <label className="block text-sm font-medium text-zinc-300">Email address</label>
               <div className="mt-1 relative">
                 <Mail className="absolute left-3 top-3 w-4 h-4 text-zinc-500" />
                 <input
@@ -203,95 +138,75 @@ export default function Auth() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full appearance-none rounded-lg border border-zinc-800 bg-zinc-950 pl-10 pr-3 py-2 text-zinc-200 placeholder-zinc-500 focus:border-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-600 sm:text-sm transition-colors"
+                  disabled={loading}
+                  className="block w-full appearance-none rounded-lg border border-zinc-800 bg-zinc-950 pl-10 pr-3 py-2 text-zinc-200 placeholder-zinc-500 focus:border-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-600 sm:text-sm transition-colors disabled:opacity-50"
                   placeholder="you@example.com"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-zinc-300">
-                Password
-              </label>
+              <label className="block text-sm font-medium text-zinc-300">Password</label>
               <div className="mt-1 relative">
                 <Lock className="absolute left-3 top-3 w-4 h-4 text-zinc-500" />
                 <input
                   type="password"
                   required
+                  minLength={6}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full appearance-none rounded-lg border border-zinc-800 bg-zinc-950 pl-10 pr-3 py-2 text-zinc-200 placeholder-zinc-500 focus:border-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-600 sm:text-sm transition-colors"
+                  disabled={loading}
+                  className="block w-full appearance-none rounded-lg border border-zinc-800 bg-zinc-950 pl-10 pr-3 py-2 text-zinc-200 placeholder-zinc-500 focus:border-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-600 sm:text-sm transition-colors disabled:opacity-50"
                   placeholder="••••••••"
                 />
               </div>
-              {!isLogin && (
-                <p className="mt-1 text-xs text-zinc-500">Min 6 characters</p>
-              )}
+              {!isLogin && <p className="mt-1 text-xs text-zinc-500">Min 6 characters</p>}
             </div>
 
-            <div>
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex w-full justify-center rounded-lg border border-transparent bg-white py-2.5 px-4 text-sm font-semibold text-black shadow-sm hover:bg-zinc-200 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 focus:ring-offset-zinc-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? 'Processing...' : (isLogin ? 'Sign in' : 'Sign up')}
-              </button>
-            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex w-full justify-center rounded-lg border border-transparent bg-white py-2.5 px-4 text-sm font-semibold text-black shadow-sm hover:bg-zinc-200 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 focus:ring-offset-zinc-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Processing...' : (isLogin ? 'Sign in' : 'Sign up')}
+            </button>
           </form>
 
           <div className="mt-6">
             <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-zinc-800" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="bg-zinc-900 px-2 text-zinc-500">Or continue with</span>
-              </div>
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-zinc-800" /></div>
+              <div className="relative flex justify-center text-sm"><span className="bg-zinc-900 px-2 text-zinc-500">Or continue with</span></div>
             </div>
 
             <div className="mt-6 grid grid-cols-2 gap-3">
               <button
                 type="button"
-                onClick={handleGoogleSignIn}
+                onClick={() => handleProviderSignIn('google')}
                 disabled={loading}
-                className="inline-flex w-full justify-center rounded-lg border border-zinc-800 bg-zinc-950 py-2.5 px-4 text-sm font-medium text-zinc-300 shadow-sm hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-600 focus:ring-offset-2 focus:ring-offset-zinc-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Continue with Google"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-800 bg-zinc-950 py-2.5 px-4 text-sm font-medium text-zinc-300 shadow-sm hover:bg-zinc-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <svg className="h-5 w-5" viewBox="0 0 24 24">
-                  <path
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                    fill="#4285F4"
-                  />
-                  <path
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                    fill="#34A853"
-                  />
-                  <path
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                    fill="#FBBC05"
-                  />
-                  <path
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                    fill="#EA4335"
-                  />
+                <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
                 </svg>
+                Google
               </button>
 
               <button
                 type="button"
-                onClick={handleGithubSignIn}
+                onClick={() => handleProviderSignIn('github')}
                 disabled={loading}
-                className="inline-flex w-full justify-center rounded-lg border border-zinc-800 bg-zinc-950 py-2.5 px-4 text-sm font-medium text-zinc-300 shadow-sm hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-600 focus:ring-offset-2 focus:ring-offset-zinc-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Continue with GitHub"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-800 bg-zinc-950 py-2.5 px-4 text-sm font-medium text-zinc-300 shadow-sm hover:bg-zinc-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <svg className="h-5 w-5 fill-current" viewBox="0 0 24 24">
-                  <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v 3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+                <svg className="h-5 w-5 fill-current" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58v-2.23c-3.34.73-4.04-1.42-4.04-1.42-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.21.09 1.84 1.24 1.84 1.24 1.07 1.83 2.81 1.3 3.49 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23.96-.27 1.98-.4 3-.4 1.02 0 2.05.13 3.01.4 2.29-1.55 3.3-1.23 3.3-1.23.65 1.66.24 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.81 5.62-5.48 5.92.43.37.82 1.1.82 2.22v3.29c0 .32.22.69.82.58A12.01 12.01 0 0 0 24 12C24 5.37 18.63 0 12 0z" />
                 </svg>
+                GitHub
               </button>
             </div>
           </div>
-
         </div>
       </div>
     </div>
