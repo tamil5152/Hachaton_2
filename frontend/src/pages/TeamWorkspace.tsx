@@ -318,7 +318,9 @@ export default function TeamWorkspace() {
   }, [recentEmojiBases]);
 
   const isAdmin = currentRole === "admin";
-  const canCollaborate = membershipStatus !== "pending" && membershipStatus !== "rejected";
+  // Chat should be usable as soon as the signed-in user opens the workspace.
+  // Membership approval still controls workspace administration, not the ability to communicate.
+  const canCollaborate = Boolean(auth.currentUser);
   const approvedMembers = useMemo(() => members.filter((member) => (member.membershipStatus || "approved") === "approved"), [members]);
   const pendingJoinRequests = useMemo(() => joinRequests.filter((request) => request.status === "pending"), [joinRequests]);
   const pendingReviewRequests = useMemo(() => reviewRequests.filter((request) => request.status === "pending"), [reviewRequests]);
