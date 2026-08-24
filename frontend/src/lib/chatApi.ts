@@ -1,6 +1,8 @@
 import type { ChatMessage } from "../components/chat/types";
 
-const API_BASE = (import.meta as any).env?.VITE_API_BASE_URL || "http://localhost:9090/api";
+// Use a configurable backend in development/production. The default is same-origin so
+// the frontend container's Nginx proxy can route /api to the backend service.
+const API_BASE = (import.meta as any).env?.VITE_API_BASE_URL || "/api";
 
 type BackendChatMessage = {
   id: string;
